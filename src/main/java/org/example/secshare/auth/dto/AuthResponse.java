@@ -1,4 +1,3 @@
 package org.example.secshare.auth.dto;
 
-public class AuthResponse {
-}
+public record AuthResponse(String accessToken) {}

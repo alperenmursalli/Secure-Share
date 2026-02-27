@@ -1,4 +1,5 @@
 package org.example.secshare.auth.security;
+import java.util.UUID;
 
-public class UserPrincipal {
+public record UserPrincipal(UUID userId,String email) {
 }

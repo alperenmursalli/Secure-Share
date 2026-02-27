@@ -1,22 +1,30 @@
 package org.example.secshare.auth;
 
-import org.example.secshare.auth.security.UserPrincipal;
+import org.example.secshare.auth.dto.RegisterRequest;
+import org.example.secshare.auth.dto.LoginRequest;
+import org.example.secshare.auth.dto.AuthResponse;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
-
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 public class AuthController {
 
-    private final JwtService jwtService;
+    private final AuthService authService;
 
-    public AuthController(JwtService jwtService) {
-        this.jwtService = jwtService;
+    public AuthController(AuthService authService) {
+        this.authService = authService;
     }
 
-    @PostMapping("/token")
-    public String token(@RequestParam String email) {
-        return jwtService.generateToken(new UserPrincipal(UUID.randomUUID(), email));
+    @PostMapping("/register")
+    public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest request) {
+        authService.register(request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+    @PostMapping("/login")
+    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
     }
 }
