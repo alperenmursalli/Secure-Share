@@ -5,7 +5,6 @@ import org.example.secshare.auth.dto.LoginRequest;
 import org.example.secshare.auth.dto.AuthResponse;
 import org.example.secshare.user.User;
 import org.example.secshare.user.UserRepository;
-import org.example.secshare.auth.JwtService;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;

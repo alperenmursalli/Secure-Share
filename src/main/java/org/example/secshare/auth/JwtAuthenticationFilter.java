@@ -6,14 +6,16 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.example.secshare.auth.security.UserPrincipal;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -44,15 +46,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Jws<Claims> jws = jwtService.parseAndValidate(token);
             Claims claims = jws.getPayload();
 
-            String userId = claims.getSubject();
+            String subject = claims.getSubject();
+            if (subject == null) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            UUID userId = UUID.fromString(subject);
+            String email = claims.get("email", String.class);
+            if (email == null) {
+                email = "";
+            }
+
+            @SuppressWarnings("unchecked")
             List<String> roles = claims.get("roles", List.class);
+            if (roles == null) {
+                roles = List.of();
+            }
 
             var authorities = roles.stream()
                     .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                     .toList();
 
+            UserPrincipal principal = new UserPrincipal(userId, email);
+
             var authentication = new UsernamePasswordAuthenticationToken(
-                    userId,
+                    principal,
                     null,
                     authorities
             );

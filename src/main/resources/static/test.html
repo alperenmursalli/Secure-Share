@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecShare</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fafafa;
+            line-height: 1.6;
+        }
+        .header {
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #333;
+        }
+        .user-info {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .logout-btn {
+            float: right;
+            padding: 6px 12px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .logout-btn:hover {
+            background: #c82333;
+        }
+        .card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #555;
+        }
+        input[type="email"],
+        input[type="password"],
+        input[type="text"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.secondary {
+            background: #6c757d;
+        }
+        button.secondary:hover {
+            background: #5a6268;
+        }
+        .msg {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            display: none;
+        }
+        .msg.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .msg.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .file-list {
+            margin-top: 15px;
+        }
+        .file-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .file-info {
+            flex: 1;
+        }
+        .file-name {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        .file-meta {
+            font-size: 12px;
+            color: #666;
+        }
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .hidden {
+            display: none;
+        }
+        small {
+            display: block;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>SecShare</h1>
+        <div id="userSection" class="hidden">
+            <div class="user-info">
+                <span id="userEmail"></span>
+                <button class="logout-btn" onclick="logout()">Çıkış</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="authSection">
+        <div class="card">
+            <h2>Kayıt Ol</h2>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="regEmail" placeholder="email@example.com">
+            </div>
+            <div class="form-group">
+                <label>Şifre (min 8 karakter)</label>
+                <input type="password" id="regPassword" placeholder="Şifrenizi girin">
+            </div>
+            <button onclick="register()">Kayıt Ol</button>
+            <div id="regMsg" class="msg"></div>
+        </div>
+
+        <div class="card">
+            <h2>Giriş Yap</h2>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="loginEmail" placeholder="email@example.com">
+            </div>
+            <div class="form-group">
+                <label>Şifre</label>
+                <input type="password" id="loginPassword" placeholder="Şifrenizi girin">
+            </div>
+            <button onclick="login()">Giriş Yap</button>
+            <div id="loginMsg" class="msg"></div>
+        </div>
+    </div>
+
+    <div id="appSection" class="hidden">
+        <div class="card">
+            <h2>Dosya Yükle</h2>
+            <div class="form-group">
+                <label>Dosya Seç</label>
+                <input type="file" id="fileInput">
+                <small>Maksimum 50MB. PDF, resim, metin, Office dosyaları ve ZIP desteklenir.</small>
+            </div>
+            <button onclick="uploadFile()">Yükle</button>
+            <div id="uploadMsg" class="msg"></div>
+        </div>
+
+        <div class="card">
+            <h2>Dosyalarım</h2>
+            <button class="secondary" onclick="loadFiles()">Yenile</button>
+            <div id="fileList" class="file-list"></div>
+        </div>
+    </div>
+
+    <script>
+        let token = '';
+        let userEmail = '';
+
+        function showMsg(elementId, text, isSuccess) {
+            const el = document.getElementById(elementId);
+            el.textContent = text;
+            el.className = 'msg ' + (isSuccess ? 'success' : 'error');
+            el.style.display = 'block';
+        }
+
+        async function register() {
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+
+            if (!email || !password) {
+                showMsg('regMsg', 'Email ve şifre gerekli', false);
+                return;
+            }
+
+            if (password.length < 8) {
+                showMsg('regMsg', 'Şifre en az 8 karakter olmalı', false);
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (res.status === 201) {
+                    showMsg('regMsg', 'Kayıt başarılı', true);
+                    document.getElementById('regEmail').value = '';
+                    document.getElementById('regPassword').value = '';
+                } else {
+                    const err = await res.text();
+                    showMsg('regMsg', 'Hata: ' + err, false);
+                }
+            } catch (err) {
+                showMsg('regMsg', 'Bağlantı hatası', false);
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showMsg('loginMsg', 'Email ve şifre gerekli', false);
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    token = data.accessToken;
+                    userEmail = email;
+                    
+                    document.getElementById('userEmail').textContent = userEmail;
+                    document.getElementById('userSection').classList.remove('hidden');
+                    document.getElementById('authSection').classList.add('hidden');
+                    document.getElementById('appSection').classList.remove('hidden');
+                    
+                    loadFiles();
+                } else {
+                    const err = await res.text();
+                    showMsg('loginMsg', 'Hata: ' + err, false);
+                }
+            } catch (err) {
+                showMsg('loginMsg', 'Bağlantı hatası', false);
+            }
+        }
+
+        function logout() {
+            token = '';
+            userEmail = '';
+            document.getElementById('userSection').classList.add('hidden');
+            document.getElementById('authSection').classList.remove('hidden');
+            document.getElementById('appSection').classList.add('hidden');
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+        }
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showMsg('uploadMsg', 'Dosya seçin', false);
+                return;
+            }
+
+            if (file.size > 50 * 1024 * 1024) {
+                showMsg('uploadMsg', 'Dosya çok büyük (max 50MB)', false);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/files/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: formData
+                });
+
+                if (res.ok) {
+                    showMsg('uploadMsg', 'Dosya yüklendi', true);
+                    fileInput.value = '';
+                    loadFiles();
+                } else {
+                    const err = await res.text();
+                    showMsg('uploadMsg', 'Hata: ' + err, false);
+                }
+            } catch (err) {
+                showMsg('uploadMsg', 'Bağlantı hatası', false);
+            }
+        }
+
+        async function loadFiles() {
+            const listDiv = document.getElementById('fileList');
+
+            if (!token) {
+                listDiv.innerHTML = '<p style="color:#666;padding:20px;text-align:center;">Giriş yapmalısınız</p>';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/files', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (res.ok) {
+                    const files = await res.json();
+                    
+                    if (files.length === 0) {
+                        listDiv.innerHTML = '<p style="color:#666;padding:20px;text-align:center;">Henüz dosya yok</p>';
+                        return;
+                    }
+
+                    listDiv.innerHTML = files.map(f => `
+                        <div class="file-item">
+                            <div class="file-info">
+                                <div class="file-name">${escape(f.name)}</div>
+                                <div class="file-meta">${formatSize(f.sizeBytes)} • ${f.contentType}</div>
+                            </div>
+                            <div class="file-actions">
+                                <button class="btn-sm btn-success" onclick="downloadFile('${f.id}', '${escape(f.name)}')">İndir</button>
+                                <button class="btn-sm btn-danger" onclick="deleteFile('${f.id}')">Sil</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    listDiv.innerHTML = '<p style="color:#dc3545;padding:20px;">Yükleme hatası</p>';
+                }
+            } catch (err) {
+                listDiv.innerHTML = '<p style="color:#dc3545;padding:20px;">Bağlantı hatası</p>';
+            }
+        }
+
+        async function downloadFile(id, name) {
+            try {
+                const res = await fetch(`/api/files/${id}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = name;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+            } catch (err) {
+                alert('İndirme hatası');
+            }
+        }
+
+        async function deleteFile(id) {
+            if (!confirm('Silmek istediğinize emin misiniz?')) return;
+
+            try {
+                const res = await fetch(`/api/files/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (res.status === 204) {
+                    loadFiles();
+                }
+            } catch (err) {
+                alert('Silme hatası');
+            }
+        }
+
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
+        }
+
+        function escape(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
+
+</body>
+</html>
