@@ -1,9 +1,7 @@
 services:
   - type: web
     name: secshare
-    env: java
-    buildCommand: ./mvnw clean package -DskipTests
-    startCommand: java -jar target/secshare-0.0.1-SNAPSHOT.jar
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: DATABASE_URL
         fromDatabase:
