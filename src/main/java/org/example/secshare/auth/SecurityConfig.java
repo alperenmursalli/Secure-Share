@@ -8,8 +8,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
@@ -33,6 +35,9 @@ public class SecurityConfig {
                     .requestMatchers("/", "/index.html").permitAll()
                     .requestMatchers("/favicon.ico", "/**/*.css", "/**/*.js", "/**/*.png", "/**/*.jpg", "/**/*.svg").permitAll()
                     .requestMatchers("/error").permitAll()
+                    .requestMatchers("/files.html").hasRole("ADMIN")
+                    .requestMatchers("/api/files/all").hasRole("ADMIN")
+        
                     .requestMatchers("/h2-console/**").permitAll()
                     .requestMatchers("/test.html").permitAll()
                     .anyRequest().authenticated()

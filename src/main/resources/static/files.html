@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>SecureShare Admin</title>
+    <style>
+        body { font-family: Arial; margin: 40px; background:#f7f7f7; }
+        h2 { margin-bottom:20px; }
+        table { border-collapse: collapse; width: 100%; background:white; }
+        th, td { border: 1px solid #ddd; padding: 10px; }
+        th { background: #f0f0f0; }
+        button { padding: 6px 12px; cursor: pointer; }
+        input { padding:8px; width:100%; margin-bottom:10px; }
+    </style>
+</head>
+<body>
+
+<h2>Uploaded Files (Admin Panel)</h2>
+
+<label>JWT Token:</label>
+<input id="token" placeholder="Token buraya yapıştır">
+
+<button onclick="loadFiles()">Dosyaları Getir</button>
+
+<table>
+    <thead>
+    <tr>
+        <th>Filename</th>
+        <th>Size (KB)</th>
+        <th>Date</th>
+        <th>Download</th>
+        <th>Delete</th>
+    </tr>
+    </thead>
+    <tbody id="fileTable"></tbody>
+</table>
+
+<script>
+async function loadFiles() {
+    const token = document.getElementById("token").value;
+
+    const res = await fetch("/api/files/all", {
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    });
+
+    const files = await res.json();
+    const table = document.getElementById("fileTable");
+    table.innerHTML = "";
+
+    files.forEach(f => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td>${f.originalFilename}</td>
+            <td>${(f.sizeBytes/1024).toFixed(1)}</td>
+            <td>${new Date(f.createdAt).toLocaleString()}</td>
+            <td><button onclick="downloadFile('${f.id}', '${token}')">Download</button></td>
+            <td><button onclick="deleteFile('${f.id}', '${token}')">Delete</button></td>
+        `;
+
+        table.appendChild(row);
+    });
+}
+
+function downloadFile(id, token) {
+    window.open("/api/files/" + id + "?token=" + token);
+}
+
+async function deleteFile(id, token) {
+    await fetch("/api/files/" + id, {
+        method: "DELETE",
+        headers: { "Authorization": "Bearer " + token }
+    });
+    loadFiles();
+}
+</script>
+
+</body>
+</html>
