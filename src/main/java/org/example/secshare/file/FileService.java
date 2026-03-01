@@ -176,4 +176,11 @@ public class FileService {
         }
         return filename.substring(lastDot + 1);
     }
+    
+    public List<FileInfoResponse> listAllFiles() {
+        return sharedFileRepository.findByDeletedFalseOrderByCreatedAtDesc()
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
 }

@@ -30,6 +30,7 @@ public class FileController {
     ) {
         return fileService.upload(file, user);
     }
+    
 
     @GetMapping
     public List<FileInfoResponse> listMyFiles(
@@ -53,6 +54,10 @@ public class FileController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + originalFilename + "\"")
                 .body(resource);
     }
+    @GetMapping("/all")
+    public List<FileInfoResponse> listAllFiles() {
+        return fileService.listAllFiles();
+}
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
