@@ -17,6 +17,7 @@ import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -37,7 +38,8 @@ public class FileService {
     public FileService(
             SharedFileRepository sharedFileRepository,
             UserRepository userRepository,
-            @Value("${app.storage.base-path:uploads}") String basePath
+            // Fly için default'u /tmp/uploads yaptık
+            @Value("${app.storage.base-path:/tmp/uploads}") String basePath
     ) {
         this.sharedFileRepository = sharedFileRepository;
         this.userRepository = userRepository;
@@ -46,7 +48,7 @@ public class FileService {
         try {
             Files.createDirectories(this.baseStoragePath);
         } catch (IOException e) {
-            throw new IllegalStateException("Could not create storage directory", e);
+            throw new IllegalStateException("Could not create storage directory: " + this.baseStoragePath, e);
         }
     }
 
@@ -72,10 +74,13 @@ public class FileService {
         UUID fileId = UUID.randomUUID();
         String storageFilename = fileId + (extension.isEmpty() ? "" : "." + extension);
 
-        Path targetPath = baseStoragePath.resolve(storageFilename);
+        Path targetPath = baseStoragePath.resolve(storageFilename).normalize();
+        if (!targetPath.startsWith(baseStoragePath)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Geçersiz dosya adı");
+        }
 
         try {
-            file.transferTo(targetPath);
+            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Dosya kaydedilemedi");
         }
@@ -111,7 +116,7 @@ public class FileService {
     public Resource loadFile(UUID fileId, UserPrincipal principal) {
         SharedFile sharedFile = getOwnedFileOrThrow(fileId, principal);
 
-        Path filePath = baseStoragePath.resolve(sharedFile.getStorageFilename());
+        Path filePath = baseStoragePath.resolve(sharedFile.getStorageFilename()).normalize();
         try {
             Resource resource = new UrlResource(filePath.toUri());
             if (!resource.exists() || !resource.isReadable()) {
@@ -139,8 +144,7 @@ public class FileService {
         sharedFile.setDeleted(true);
         sharedFileRepository.save(sharedFile);
 
-        // Fiziksel dosyayı silmek istersen (opsiyonel, hata yutsa da olur)
-        Path filePath = baseStoragePath.resolve(sharedFile.getStorageFilename());
+        Path filePath = baseStoragePath.resolve(sharedFile.getStorageFilename()).normalize();
         try {
             Files.deleteIfExists(filePath);
         } catch (IOException ignored) {
@@ -173,4 +177,3 @@ public class FileService {
         return filename.substring(lastDot + 1);
     }
 }
-
