@@ -28,12 +28,14 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/health", "/healthz").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/error").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll()
-                        .requestMatchers("/test.html", "/static/**").permitAll()
-                        .anyRequest().authenticated()
+                    .requestMatchers("/health", "/healthz").permitAll()
+                    .requestMatchers("/api/auth/**").permitAll()
+                    .requestMatchers("/", "/index.html").permitAll()
+                    .requestMatchers("/favicon.ico", "/**/*.css", "/**/*.js", "/**/*.png", "/**/*.jpg", "/**/*.svg").permitAll()
+                    .requestMatchers("/error").permitAll()
+                    .requestMatchers("/h2-console/**").permitAll()
+                    .requestMatchers("/test.html").permitAll()
+                    .anyRequest().authenticated()
                 )
 
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
