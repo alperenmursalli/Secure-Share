@@ -39,7 +39,7 @@ public class FileService {
             SharedFileRepository sharedFileRepository,
             UserRepository userRepository,
             // Fly için default'u /tmp/uploads yaptık
-            @Value("${app.storage.base-path:/tmp/uploads}") String basePath
+            @Value("${app.storage.base-path:/uploads}") String basePath
     ) {
         this.sharedFileRepository = sharedFileRepository;
         this.userRepository = userRepository;
