@@ -44,10 +44,14 @@ public class VulnProperties {
         private boolean userEnum = false;
         /** login denemelerinde rate limit yok (brute force). */
         private boolean noRateLimit = false;
+        /** register'da client'in gonderdigi roles alani kabul edilir (mass assignment). */
+        private boolean massAssignment = false;
         public boolean isUserEnum() { return userEnum; }
         public void setUserEnum(boolean v) { this.userEnum = v; }
         public boolean isNoRateLimit() { return noRateLimit; }
         public void setNoRateLimit(boolean v) { this.noRateLimit = v; }
+        public boolean isMassAssignment() { return massAssignment; }
+        public void setMassAssignment(boolean v) { this.massAssignment = v; }
     }
 
     public static class Access {
@@ -76,17 +80,25 @@ public class VulnProperties {
         private boolean ssrf = false;
         /** XML parser'da DTD/external entity acik (XXE). */
         private boolean xxe = false;
+        /** SnakeYAML guvensiz load (CVE-2022-1471 sinifi deserialization RCE). */
+        private boolean yaml = false;
         public boolean isSsrf() { return ssrf; }
         public void setSsrf(boolean v) { this.ssrf = v; }
         public boolean isXxe() { return xxe; }
         public void setXxe(boolean v) { this.xxe = v; }
+        public boolean isYaml() { return yaml; }
+        public void setYaml(boolean v) { this.yaml = v; }
     }
 
     public static class Process {
         /** Runtime.exec ile kabuk komutu (command injection / RCE). */
         private boolean cmdInjection = false;
+        /** zip cikartirken entry adi dogrulanmaz (Zip Slip -> depo disina yazma). */
+        private boolean zipSlip = false;
         public boolean isCmdInjection() { return cmdInjection; }
         public void setCmdInjection(boolean v) { this.cmdInjection = v; }
+        public boolean isZipSlip() { return zipSlip; }
+        public void setZipSlip(boolean v) { this.zipSlip = v; }
     }
 
     public static class Serve {

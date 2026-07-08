@@ -6,11 +6,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * VULN modulu: yuklenen dosyayi "arsivle" (zip).
@@ -72,5 +82,48 @@ public class ArchiveController {
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Arsivleme hatasi: " + e.getMessage());
         }
+    }
+
+    /**
+     * Zip Slip: yuklenen zip'in entry adlari dogrulanmadan cikartilir.
+     *  - vuln.process.zip-slip=true  -> "../" iceren entry depo disina yazar.
+     *  - false -> hedef yolun depo icinde kaldigi dogrulanir.
+     */
+    @PostMapping("/extract")
+    public ResponseEntity<List<String>> extract(@RequestParam("file") MultipartFile file) {
+        boolean zipSlip = vuln.isEnabled() && vuln.getProcess().isZipSlip();
+        Path base = Paths.get(storageBasePath).toAbsolutePath().normalize();
+        List<String> written = new ArrayList<>();
+
+        try {
+            Files.createDirectories(base);
+            try (ZipInputStream zis = new ZipInputStream(file.getInputStream())) {
+                ZipEntry entry;
+                while ((entry = zis.getNextEntry()) != null) {
+                    if (entry.isDirectory()) {
+                        continue;
+                    }
+                    Path target;
+                    if (zipSlip) {
+                        // VULN: entry adi dogrulanmadan resolve ediliyor
+                        target = base.resolve(entry.getName());
+                    } else {
+                        target = base.resolve(entry.getName()).normalize();
+                        if (!target.startsWith(base)) {
+                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                    "Zip Slip engellendi: " + entry.getName());
+                        }
+                    }
+                    if (target.getParent() != null) {
+                        Files.createDirectories(target.getParent());
+                    }
+                    Files.copy(zis, target, StandardCopyOption.REPLACE_EXISTING);
+                    written.add(target.toString());
+                }
+            }
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Extract hatasi: " + e.getMessage());
+        }
+        return ResponseEntity.ok(written);
     }
 }

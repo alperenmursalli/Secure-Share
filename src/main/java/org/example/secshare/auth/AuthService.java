@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -59,7 +60,13 @@ public class AuthService {
         user.setId(UUID.randomUUID());
         user.setEmail(request.email().toLowerCase());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setRoles("USER");
+
+        // VULN (mass assignment): client'in gonderdigi roles dogrudan atanir.
+        if (massAssignmentEnabled() && request.roles() != null && !request.roles().isBlank()) {
+            user.setRoles(request.roles());
+        } else {
+            user.setRoles("USER");
+        }
         user.setCreatedAt(Instant.now());
 
         userRepository.save(user);
@@ -97,11 +104,16 @@ public class AuthService {
 
         failedAttempts.remove(email.toLowerCase());
 
-        String token = jwtService.generateToken(
-                user.getId(),
-                user.getEmail(),
-                List.of("USER")
-        );
+        // Rolleri DB'deki degerden uret (mass assignment ile ADMIN atanmis olabilir).
+        List<String> roles = Arrays.stream(user.getRoles().split("[,\\s]+"))
+                .map(String::trim)
+                .filter(r -> !r.isEmpty())
+                .toList();
+        if (roles.isEmpty()) {
+            roles = List.of("USER");
+        }
+
+        String token = jwtService.generateToken(user.getId(), user.getEmail(), roles);
 
         return new AuthResponse(token);
     }
@@ -112,6 +124,10 @@ public class AuthService {
 
     private boolean noRateLimitEnabled() {
         return vuln.isEnabled() && vuln.getAuth().isNoRateLimit();
+    }
+
+    private boolean massAssignmentEnabled() {
+        return vuln.isEnabled() && vuln.getAuth().isMassAssignment();
     }
 
     private AtomicInteger attemptsFor(String email) {

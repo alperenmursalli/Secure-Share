@@ -1,0 +1,45 @@
+# =====================================================================
+#  SecShare VULN - izole pentest/egitim ortami
+#  Calistirma:  docker compose -f docker-compose.vuln.yml up --build
+#
+#  'internal' servisi host'a ACILMAZ (ports yok, sadece expose) -> yalnizca
+#  'app' konteynerinden erisilebilir. Bu yuzden ic secret'a ulasmanin tek
+#  yolu app uzerindeki SSRF acigidir (POST /api/files/import).
+#
+#  UYARI: Bu ortam bilerek guvensizdir. Internete acik calistirmayin.
+# =====================================================================
+services:
+  app:
+    build: .
+    environment:
+      SPRING_PROFILES_ACTIVE: vuln
+      # H2 kullanilir; harici Postgres gerekmez.
+      JWT_EXPIRATION_MINUTES: "60"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - internal
+    networks:
+      - secnet
+
+  # Yalnizca ic agdan erisilebilen "metadata/secret" servisi (SSRF hedefi).
+  internal:
+    image: python:3.12-alpine
+    working_dir: /srv
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /srv/latest/meta-data
+        printf 'internal-only secret store\nDB_PASS=S3cr3t-db-pw\nFLAG{ssrf_reached_internal_service}\n' > /srv/secret
+        printf 'iam/\nhostname\n' > /srv/latest/meta-data/index.html
+        printf 'secshare-internal-host\n' > /srv/latest/meta-data/hostname
+        python -m http.server 80
+    expose:
+      - "80"        # sadece ic agda; host'a publish EDILMEZ
+    networks:
+      - secnet
+
+networks:
+  secnet:
+    driver: bridge

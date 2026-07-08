@@ -51,3 +51,18 @@ edebiliyor musun? Bir "view" linki JavaScript çalıştırabilir mi?
 "Arşivle" özelliği dosya adını bir kabuk komutuna koyuyor. Araya kendi komutunu
 sokabilir misin?
 **Hedef:** `master-keys.txt` içindeki final flag + komut çalıştırma kanıtı (`id`).
+
+---
+
+## Ek Görevler
+
+- **Mass Assignment (A01/A08):** Kayıt isteğine fazladan bir alan eklersen ne olur?
+  Doğrudan admin olarak kaydolabilir misin?
+- **Recon — Actuator (A05):** `/actuator/*` altında hangi hassas uçlar var? `env` ve
+  `heapdump` sana ne verir?
+- **Insecure Deserialization / SCA (A06/A08):** Bir "YAML içe aktar" ucu var. Parser
+  hangi kütüphane, hangi sürüm? Bilinen bir CVE'si var mı? `!!` etiketleriyle ne yapılabilir?
+- **Zip Slip (A01):** Yüklediğin zip'in içindeki dosya adlarını sen kontrol ediyorsun.
+  Çıkartma dizininin dışına yazabilir misin?
+- **SSRF pivot (A10):** docker-compose ortamında yalnızca iç ağdan erişilen bir servis var.
+  Ona doğrudan ulaşamazsın — ama uygulama üzerinden?

