@@ -34,3 +34,6 @@ build/
 uploads/
 ### Claude Code ###
 .claude/
+
+### Secrets ###
+.env

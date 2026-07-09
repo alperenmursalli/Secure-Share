@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: secshare
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d secshare"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Not published to the host — only reachable by the app container.
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/secshare
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      STORAGE_PATH: /app/uploads
+      PORT: "8080"
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      # Bind only to localhost; put nginx/TLS in front for public access.
+      - "127.0.0.1:8080:8080"
+
+volumes:
+  pgdata:
+  uploads:
