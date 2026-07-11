@@ -345,6 +345,17 @@
                 </div>
                 <div id="fileList"></div>
             </div>
+
+            <div class="card panel hidden" id="adminPanel">
+                <div class="panel-head">
+                    <h2>All files <span class="badge">Admin</span></h2>
+                    <button class="secondary sm" onclick="loadAllFiles()">Refresh</button>
+                </div>
+                <p class="muted" style="font-size:13px; margin-bottom:14px;">
+                    System-wide overview of every uploaded file. File contents remain private to their owners.
+                </p>
+                <div id="adminList"></div>
+            </div>
         </section>
     </main>
 
@@ -362,6 +373,7 @@
         let token = localStorage.getItem('secshare_token') || '';
         let selectedFile = null;
         let currentFiles = [];
+        let isAdmin = false;
 
         function authHeaders() { return { 'Authorization': 'Bearer ' + token }; }
 
@@ -482,9 +494,11 @@
         function logout() {
             token = '';
             selectedFile = null;
+            isAdmin = false;
             localStorage.removeItem('secshare_token');
             document.getElementById('userChip').classList.add('hidden');
             document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('adminPanel').classList.add('hidden');
             document.getElementById('landing').classList.remove('hidden');
             document.getElementById('loginPassword').value = '';
             toast('Signed out.');
@@ -514,9 +528,53 @@
                 ? new Date(me.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
                 : '—';
 
+            isAdmin = Array.isArray(me.roles) && me.roles.includes('ADMIN');
+            document.getElementById('adminPanel').classList.toggle('hidden', !isAdmin);
+
             document.getElementById('landing').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
             await loadFiles();
+            if (isAdmin) await loadAllFiles();
+        }
+
+        async function loadAllFiles() {
+            const list = document.getElementById('adminList');
+            list.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+            try {
+                const res = await fetch(API.files + '/all', { headers: authHeaders() });
+                if (res.status === 401) { logout(); return; }
+                if (res.status === 403) { list.innerHTML = '<div class="empty">Admin role required.</div>'; return; }
+                if (!res.ok) { list.innerHTML = '<div class="empty">Could not load files.</div>'; return; }
+
+                const files = await res.json();
+                if (!files.length) {
+                    list.innerHTML = '<div class="empty">No files in the system yet.</div>';
+                    return;
+                }
+                list.innerHTML = `
+                    <table class="files">
+                        <thead>
+                            <tr><th>Name</th><th class="col-meta">Type</th><th class="col-meta">Size</th><th class="col-meta">Uploaded</th></tr>
+                        </thead>
+                        <tbody>
+                            ${files.map(f => `
+                                <tr>
+                                    <td>
+                                        <div class="fcell">
+                                            <div class="ftag">${fileTag(f.name)}</div>
+                                            <div class="fname-cell" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+                                        </div>
+                                    </td>
+                                    <td class="muted">${escapeHtml(f.contentType || '—')}</td>
+                                    <td class="muted">${formatSize(f.sizeBytes)}</td>
+                                    <td class="muted">${new Date(f.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (e) {
+                list.innerHTML = '<div class="empty">Network error.</div>';
+            }
         }
 
         async function loadFiles() {

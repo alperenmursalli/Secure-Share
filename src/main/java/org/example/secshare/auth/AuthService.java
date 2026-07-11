@@ -61,7 +61,7 @@ public class AuthService {
         String token = jwtService.generateToken(
                 user.getId(),
                 user.getEmail(),
-                List.of("USER")
+                parseRoles(user)
         );
 
         return new AuthResponse(token);
@@ -72,16 +72,23 @@ public class AuthService {
         User user = userRepository.findById(principal.userId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
 
+        return new MeResponse(
+                user.getId(),
+                user.getEmail(),
+                parseRoles(user),
+                user.getCreatedAt()
+        );
+    }
+
+    /** Turns the comma-separated roles column into a clean list, defaulting to USER. */
+    private List<String> parseRoles(User user) {
+        if (user.getRoles() == null || user.getRoles().isBlank()) {
+            return List.of("USER");
+        }
         List<String> roles = Arrays.stream(user.getRoles().split(","))
                 .map(String::trim)
                 .filter(r -> !r.isBlank())
                 .toList();
-
-        return new MeResponse(
-                user.getId(),
-                user.getEmail(),
-                roles,
-                user.getCreatedAt()
-        );
+        return roles.isEmpty() ? List.of("USER") : roles;
     }
 }
