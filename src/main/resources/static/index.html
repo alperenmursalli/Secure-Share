@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecShare — Güvenli Dosya Paylaşımı</title>
+    <style>
+        :root {
+            --brand: #6366f1;
+            --brand-strong: #4f46e5;
+            --brand-soft: rgba(99, 102, 241, 0.12);
+            --bg: #f4f5fb;
+            --surface: #ffffff;
+            --surface-2: #f8f9fc;
+            --border: #e5e7eb;
+            --text: #111827;
+            --text-muted: #6b7280;
+            --success: #16a34a;
+            --success-soft: #dcfce7;
+            --danger: #dc2626;
+            --danger-soft: #fee2e2;
+            --shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.05);
+            --radius: 14px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0b0d14;
+                --surface: #14171f;
+                --surface-2: #1b1f29;
+                --border: #262b36;
+                --text: #f3f4f6;
+                --text-muted: #9aa2b1;
+                --brand-soft: rgba(99, 102, 241, 0.2);
+                --success-soft: rgba(22, 163, 74, 0.15);
+                --danger-soft: rgba(220, 38, 38, 0.15);
+                --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.35);
+            }
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.55;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { color: var(--brand); text-decoration: none; }
+
+        /* ---------- Top bar ---------- */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 24px;
+            background: color-mix(in srgb, var(--surface) 88%, transparent);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 18px;
+            letter-spacing: -0.02em;
+        }
+        .brand-mark {
+            width: 32px; height: 32px;
+            border-radius: 9px;
+            display: grid; place-items: center;
+            background: linear-gradient(135deg, var(--brand), #a855f7);
+            color: #fff;
+            box-shadow: 0 4px 12px var(--brand-soft);
+        }
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+        .avatar {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            background: var(--brand-soft);
+            color: var(--brand-strong);
+            display: grid; place-items: center;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        /* ---------- Buttons ---------- */
+        button {
+            font: inherit;
+            cursor: pointer;
+            border: none;
+            border-radius: 9px;
+            padding: 10px 18px;
+            font-weight: 600;
+            font-size: 14px;
+            background: var(--brand);
+            color: #fff;
+            transition: transform .06s ease, background .15s ease, opacity .15s ease;
+        }
+        button:hover { background: var(--brand-strong); }
+        button:active { transform: translateY(1px); }
+        button:disabled { opacity: .55; cursor: not-allowed; }
+        button.ghost {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        button.ghost:hover { background: var(--surface-2); }
+        button.danger { background: transparent; color: var(--danger); border: 1px solid var(--border); }
+        button.danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+        button.sm { padding: 7px 12px; font-size: 13px; }
+
+        /* ---------- Layout ---------- */
+        .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 24px 64px; }
+
+        /* ---------- Hero (logged out) ---------- */
+        .hero {
+            text-align: center;
+            padding: 40px 0 28px;
+        }
+        .hero h1 {
+            font-size: clamp(30px, 5vw, 46px);
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            margin-bottom: 14px;
+        }
+        .hero .grad {
+            background: linear-gradient(120deg, var(--brand), #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .hero p {
+            color: var(--text-muted);
+            font-size: 17px;
+            max-width: 560px;
+            margin: 0 auto;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 40px;
+        }
+        .feature {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 22px;
+            text-align: left;
+            box-shadow: var(--shadow);
+        }
+        .feature .ico { font-size: 24px; margin-bottom: 10px; }
+        .feature h3 { font-size: 15px; margin-bottom: 4px; }
+        .feature p { font-size: 13px; color: var(--text-muted); }
+
+        /* ---------- Auth card ---------- */
+        .auth-card {
+            max-width: 420px;
+            margin: 36px auto 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .tabs { display: flex; }
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-muted);
+            background: var(--surface-2);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            color: var(--brand);
+            background: var(--surface);
+            border-bottom-color: var(--brand);
+        }
+        .auth-body { padding: 26px 24px; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
+        input[type="email"], input[type="password"], input[type="text"] {
+            width: 100%;
+            padding: 11px 13px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: var(--surface-2);
+            color: var(--text);
+            font-size: 14px;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px var(--brand-soft);
+        }
+        .full { width: 100%; justify-content: center; margin-top: 4px; }
+
+        /* ---------- Dashboard ---------- */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            box-shadow: var(--shadow);
+        }
+        .stat .k { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+        .stat .v { font-size: 26px; font-weight: 700; margin-top: 4px; letter-spacing: -0.02em; }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 22px;
+            box-shadow: var(--shadow);
+            margin-bottom: 22px;
+        }
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .panel-head h2 { font-size: 16px; letter-spacing: -0.01em; }
+
+        /* Dropzone */
+        .dropzone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 34px 20px;
+            text-align: center;
+            color: var(--text-muted);
+            transition: border-color .15s, background .15s;
+            cursor: pointer;
+        }
+        .dropzone:hover, .dropzone.drag {
+            border-color: var(--brand);
+            background: var(--brand-soft);
+            color: var(--brand-strong);
+        }
+        .dropzone .big { font-size: 30px; margin-bottom: 8px; }
+        .dropzone .fname { font-weight: 600; color: var(--text); margin-top: 6px; word-break: break-all; }
+        .upload-row { display: flex; gap: 10px; margin-top: 14px; }
+
+        /* File list */
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 13px 14px;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            margin-bottom: 10px;
+            background: var(--surface-2);
+        }
+        .file-item:last-child { margin-bottom: 0; }
+        .file-ico {
+            width: 42px; height: 42px;
+            border-radius: 10px;
+            display: grid; place-items: center;
+            font-size: 20px;
+            background: var(--brand-soft);
+            flex-shrink: 0;
+        }
+        .file-main { flex: 1; min-width: 0; }
+        .file-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .file-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+        .empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+        .empty .big { font-size: 34px; margin-bottom: 8px; }
+
+        /* Messages / toast */
+        .msg { padding: 11px 14px; border-radius: 9px; font-size: 13px; margin-top: 14px; display: none; }
+        .msg.success { background: var(--success-soft); color: var(--success); display: block; }
+        .msg.error { background: var(--danger-soft); color: var(--danger); display: block; }
+
+        .toast {
+            position: fixed;
+            bottom: 24px; left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--text);
+            color: var(--bg);
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: var(--shadow);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s, transform .2s;
+            z-index: 50;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        .hidden { display: none !important; }
+        .muted { color: var(--text-muted); font-size: 13px; }
+        .badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: var(--brand-soft);
+            color: var(--brand-strong);
+            text-transform: uppercase;
+            letter-spacing: .03em;
+        }
+        .spinner {
+            display: inline-block;
+            width: 15px; height: 15px;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            vertical-align: -2px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="brand">
+            <span class="brand-mark">🔐</span>
+            <span>SecShare</span>
+        </div>
+        <div id="navUser" class="nav-user hidden">
+            <div class="avatar" id="navAvatar">U</div>
+            <span id="navEmail" class="muted"></span>
+            <button class="ghost sm" onclick="logout()">Çıkış</button>
+        </div>
+    </div>
+
+    <div class="wrap">
+        <!-- ===================== LOGGED OUT ===================== -->
+        <section id="landing">
+            <div class="hero">
+                <h1>Dosyalarınızı <span class="grad">güvenle</span> saklayın ve paylaşın</h1>
+                <p>SecShare, kimlik doğrulamalı ve şifreli erişimli basit bir dosya paylaşım platformudur. Hesabınızı oluşturun, dosyalarınızı yükleyin ve yönetin.</p>
+            </div>
+
+            <div class="auth-card">
+                <div class="tabs">
+                    <div class="tab active" id="tabLogin" onclick="switchTab('login')">Giriş Yap</div>
+                    <div class="tab" id="tabRegister" onclick="switchTab('register')">Kayıt Ol</div>
+                </div>
+
+                <!-- Login -->
+                <div class="auth-body" id="loginForm">
+                    <div class="form-group">
+                        <label>E-posta</label>
+                        <input type="email" id="loginEmail" placeholder="ornek@eposta.com" autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label>Parola</label>
+                        <input type="password" id="loginPassword" placeholder="Parolanız" autocomplete="current-password"
+                               onkeydown="if(event.key==='Enter') login()">
+                    </div>
+                    <button class="full" id="loginBtn" onclick="login()">Giriş Yap</button>
+                    <div id="loginMsg" class="msg"></div>
+                </div>
+
+                <!-- Register -->
+                <div class="auth-body hidden" id="registerForm">
+                    <div class="form-group">
+                        <label>E-posta</label>
+                        <input type="email" id="regEmail" placeholder="ornek@eposta.com" autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label>Parola <span class="muted">(en az 8 karakter)</span></label>
+                        <input type="password" id="regPassword" placeholder="Güçlü bir parola" autocomplete="new-password"
+                               onkeydown="if(event.key==='Enter') register()">
+                    </div>
+                    <button class="full" id="regBtn" onclick="register()">Hesap Oluştur</button>
+                    <div id="regMsg" class="msg"></div>
+                </div>
+            </div>
+
+            <div class="features">
+                <div class="feature">
+                    <div class="ico">🔒</div>
+                    <h3>JWT Kimlik Doğrulama</h3>
+                    <p>Her istek token ile korunur; dosyalarınıza yalnızca siz erişirsiniz.</p>
+                </div>
+                <div class="feature">
+                    <div class="ico">⬆️</div>
+                    <h3>Kolay Yükleme</h3>
+                    <p>Sürükle-bırak ile 50MB'a kadar PDF, görsel, ofis ve arşiv dosyaları.</p>
+                </div>
+                <div class="feature">
+                    <div class="ico">🗂️</div>
+                    <h3>Dosya Yönetimi</h3>
+                    <p>Yüklediğiniz dosyaları listeleyin, indirin ve dilediğinizde silin.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== LOGGED IN ===================== -->
+        <section id="dashboard" class="hidden">
+            <div class="stats">
+                <div class="stat">
+                    <div class="k">Toplam Dosya</div>
+                    <div class="v" id="statCount">0</div>
+                </div>
+                <div class="stat">
+                    <div class="k">Kullanılan Alan</div>
+                    <div class="v" id="statSize">0 B</div>
+                </div>
+                <div class="stat">
+                    <div class="k">Rol</div>
+                    <div class="v"><span class="badge" id="statRole">USER</span></div>
+                </div>
+                <div class="stat">
+                    <div class="k">Üyelik</div>
+                    <div class="v" id="statSince" style="font-size:16px;">—</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <h2>Dosya Yükle</h2>
+                    <span class="muted">Maks. 50MB</span>
+                </div>
+                <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+                    <div class="big">📤</div>
+                    <div>Dosyayı buraya sürükleyin ya da <strong>tıklayıp seçin</strong></div>
+                    <div class="muted" style="margin-top:6px;">PDF, PNG, JPG, TXT, DOC(X), XLSX, ZIP</div>
+                    <div class="fname hidden" id="chosenName"></div>
+                </div>
+                <input type="file" id="fileInput" class="hidden">
+                <div class="upload-row">
+                    <button id="uploadBtn" onclick="uploadFile()" disabled>Yükle</button>
+                    <button class="ghost" id="clearBtn" onclick="clearSelection()" disabled>Temizle</button>
+                </div>
+                <div id="uploadMsg" class="msg"></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <h2>Dosyalarım</h2>
+                    <button class="ghost sm" onclick="loadFiles()">↻ Yenile</button>
+                </div>
+                <div id="fileList"></div>
+            </div>
+        </section>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API = {
+            register: '/api/auth/register',
+            login: '/api/auth/login',
+            me: '/api/auth/me',
+            files: '/api/files',
+            upload: '/api/files/upload',
+        };
+
+        let token = localStorage.getItem('secshare_token') || '';
+        let selectedFile = null;
+        let currentFiles = [];
+
+        /* ---------- helpers ---------- */
+        function authHeaders() { return { 'Authorization': 'Bearer ' + token }; }
+
+        function showMsg(id, text, ok) {
+            const el = document.getElementById(id);
+            el.textContent = text;
+            el.className = 'msg ' + (ok ? 'success' : 'error');
+        }
+        function clearMsg(id) {
+            const el = document.getElementById(id);
+            el.className = 'msg';
+            el.textContent = '';
+        }
+
+        let toastTimer;
+        function toast(text) {
+            const t = document.getElementById('toast');
+            t.textContent = text;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+        }
+
+        function busy(btnId, on, label) {
+            const btn = document.getElementById(btnId);
+            btn.disabled = on;
+            if (on) { btn.dataset.label = btn.innerHTML; btn.innerHTML = '<span class="spinner"></span>'; }
+            else if (btn.dataset.label) { btn.innerHTML = btn.dataset.label; }
+        }
+
+        function formatSize(bytes) {
+            if (!bytes) return '0 B';
+            const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return (bytes / Math.pow(k, i)).toFixed(i ? 1 : 0) + ' ' + sizes[i];
+        }
+
+        function escapeHtml(text) {
+            const d = document.createElement('div');
+            d.textContent = text ?? '';
+            return d.innerHTML;
+        }
+
+        function fileIcon(name, type) {
+            const ext = (name.split('.').pop() || '').toLowerCase();
+            if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) return '🖼️';
+            if (ext === 'pdf') return '📕';
+            if (['doc', 'docx'].includes(ext)) return '📘';
+            if (['xls', 'xlsx', 'csv'].includes(ext)) return '📗';
+            if (['zip', 'rar', '7z'].includes(ext)) return '🗜️';
+            if (['txt', 'md'].includes(ext)) return '📄';
+            return '📎';
+        }
+
+        /* ---------- tabs ---------- */
+        function switchTab(which) {
+            const isLogin = which === 'login';
+            document.getElementById('tabLogin').classList.toggle('active', isLogin);
+            document.getElementById('tabRegister').classList.toggle('active', !isLogin);
+            document.getElementById('loginForm').classList.toggle('hidden', !isLogin);
+            document.getElementById('registerForm').classList.toggle('hidden', isLogin);
+        }
+
+        /* ---------- auth ---------- */
+        async function register() {
+            clearMsg('regMsg');
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+            if (!email || !password) return showMsg('regMsg', 'E-posta ve parola gerekli', false);
+            if (password.length < 8) return showMsg('regMsg', 'Parola en az 8 karakter olmalı', false);
+
+            busy('regBtn', true);
+            try {
+                const res = await fetch(API.register, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                if (res.status === 201) {
+                    showMsg('regMsg', 'Kayıt başarılı! Şimdi giriş yapabilirsiniz.', true);
+                    document.getElementById('loginEmail').value = email;
+                    document.getElementById('loginPassword').value = password;
+                    setTimeout(() => { switchTab('login'); }, 800);
+                } else if (res.status === 409) {
+                    showMsg('regMsg', 'Bu e-posta zaten kayıtlı', false);
+                } else {
+                    showMsg('regMsg', 'Kayıt başarısız (' + res.status + ')', false);
+                }
+            } catch (e) {
+                showMsg('regMsg', 'Bağlantı hatası', false);
+            } finally { busy('regBtn', false); }
+        }
+
+        async function login() {
+            clearMsg('loginMsg');
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            if (!email || !password) return showMsg('loginMsg', 'E-posta ve parola gerekli', false);
+
+            busy('loginBtn', true);
+            try {
+                const res = await fetch(API.login, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    token = data.accessToken;
+                    localStorage.setItem('secshare_token', token);
+                    await enterApp();
+                } else if (res.status === 401) {
+                    showMsg('loginMsg', 'E-posta veya parola hatalı', false);
+                } else {
+                    showMsg('loginMsg', 'Giriş başarısız (' + res.status + ')', false);
+                }
+            } catch (e) {
+                showMsg('loginMsg', 'Bağlantı hatası', false);
+            } finally { busy('loginBtn', false); }
+        }
+
+        function logout() {
+            token = '';
+            selectedFile = null;
+            localStorage.removeItem('secshare_token');
+            document.getElementById('navUser').classList.add('hidden');
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('landing').classList.remove('hidden');
+            document.getElementById('loginPassword').value = '';
+            toast('Çıkış yapıldı');
+        }
+
+        async function enterApp() {
+            // fetch profile
+            let me;
+            try {
+                const res = await fetch(API.me, { headers: authHeaders() });
+                if (!res.ok) { throw new Error('unauthorized'); }
+                me = await res.json();
+            } catch (e) {
+                // token invalid/expired
+                token = '';
+                localStorage.removeItem('secshare_token');
+                document.getElementById('landing').classList.remove('hidden');
+                document.getElementById('dashboard').classList.add('hidden');
+                document.getElementById('navUser').classList.add('hidden');
+                return;
+            }
+
+            const initial = (me.email || '?').charAt(0);
+            document.getElementById('navAvatar').textContent = initial;
+            document.getElementById('navEmail').textContent = me.email;
+            document.getElementById('navUser').classList.remove('hidden');
+
+            document.getElementById('statRole').textContent = (me.roles && me.roles.length) ? me.roles.join(', ') : 'USER';
+            document.getElementById('statSince').textContent = me.createdAt
+                ? new Date(me.createdAt).toLocaleDateString('tr-TR', { year: 'numeric', month: 'short', day: 'numeric' })
+                : '—';
+
+            document.getElementById('landing').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+
+            await loadFiles();
+        }
+
+        /* ---------- files ---------- */
+        async function loadFiles() {
+            const list = document.getElementById('fileList');
+            list.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+            try {
+                const res = await fetch(API.files, { headers: authHeaders() });
+                if (res.status === 401) { logout(); return; }
+                if (!res.ok) { list.innerHTML = '<div class="empty">Dosyalar yüklenemedi</div>'; return; }
+
+                const files = await res.json();
+                currentFiles = files;
+                document.getElementById('statCount').textContent = files.length;
+                const total = files.reduce((s, f) => s + (f.sizeBytes || 0), 0);
+                document.getElementById('statSize').textContent = formatSize(total);
+
+                if (!files.length) {
+                    list.innerHTML = '<div class="empty"><div class="big">🗂️</div>Henüz dosya yok. İlk dosyanızı yükleyin!</div>';
+                    return;
+                }
+
+                list.innerHTML = files.map(f => `
+                    <div class="file-item">
+                        <div class="file-ico">${fileIcon(f.name, f.contentType)}</div>
+                        <div class="file-main">
+                            <div class="file-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+                            <div class="file-meta">${formatSize(f.sizeBytes)} · ${new Date(f.createdAt).toLocaleString('tr-TR')}</div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="ghost sm" onclick="downloadFile('${f.id}')">İndir</button>
+                            <button class="danger sm" onclick="deleteFile('${f.id}')">Sil</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                list.innerHTML = '<div class="empty">Bağlantı hatası</div>';
+            }
+        }
+
+        function chooseFile(file) {
+            if (!file) return;
+            selectedFile = file;
+            const el = document.getElementById('chosenName');
+            el.textContent = '📎 ' + file.name + '  (' + formatSize(file.size) + ')';
+            el.classList.remove('hidden');
+            document.getElementById('uploadBtn').disabled = false;
+            document.getElementById('clearBtn').disabled = false;
+            clearMsg('uploadMsg');
+        }
+
+        function clearSelection() {
+            selectedFile = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('chosenName').classList.add('hidden');
+            document.getElementById('uploadBtn').disabled = true;
+            document.getElementById('clearBtn').disabled = true;
+            clearMsg('uploadMsg');
+        }
+
+        async function uploadFile() {
+            if (!selectedFile) return;
+            if (selectedFile.size > 50 * 1024 * 1024) return showMsg('uploadMsg', 'Dosya çok büyük (maks 50MB)', false);
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            busy('uploadBtn', true);
+            try {
+                const res = await fetch(API.upload, { method: 'POST', headers: authHeaders(), body: formData });
+                if (res.status === 401) { logout(); return; }
+                if (res.ok) {
+                    clearSelection();
+                    toast('Dosya yüklendi ✓');
+                    await loadFiles();
+                } else {
+                    const err = await res.text();
+                    showMsg('uploadMsg', 'Yükleme başarısız: ' + (err || res.status), false);
+                }
+            } catch (e) {
+                showMsg('uploadMsg', 'Bağlantı hatası', false);
+            } finally { busy('uploadBtn', false); }
+        }
+
+        async function downloadFile(id) {
+            const meta = currentFiles.find(f => f.id === id);
+            const name = meta ? meta.name : 'download';
+            try {
+                const res = await fetch(API.files + '/' + id, { headers: authHeaders() });
+                if (!res.ok) { toast('İndirme başarısız'); return; }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = name;
+                document.body.appendChild(a); a.click(); a.remove();
+                URL.revokeObjectURL(url);
+            } catch (e) { toast('İndirme hatası'); }
+        }
+
+        async function deleteFile(id) {
+            if (!confirm('Bu dosyayı silmek istediğinize emin misiniz?')) return;
+            try {
+                const res = await fetch(API.files + '/' + id, { method: 'DELETE', headers: authHeaders() });
+                if (res.status === 401) { logout(); return; }
+                if (res.status === 204) { toast('Dosya silindi'); await loadFiles(); }
+                else toast('Silme başarısız');
+            } catch (e) { toast('Silme hatası'); }
+        }
+
+        /* ---------- drag & drop ---------- */
+        const dz = document.getElementById('dropzone');
+        document.getElementById('fileInput').addEventListener('change', e => chooseFile(e.target.files[0]));
+        ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => {
+            e.preventDefault(); dz.classList.add('drag');
+        }));
+        ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => {
+            e.preventDefault(); dz.classList.remove('drag');
+        }));
+        dz.addEventListener('drop', e => { if (e.dataTransfer.files.length) chooseFile(e.dataTransfer.files[0]); });
+
+        /* ---------- boot ---------- */
+        if (token) { enterApp(); }
+    </script>
+</body>
+</html>

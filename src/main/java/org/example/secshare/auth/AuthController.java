@@ -3,9 +3,12 @@ package org.example.secshare.auth;
 import org.example.secshare.auth.dto.RegisterRequest;
 import org.example.secshare.auth.dto.LoginRequest;
 import org.example.secshare.auth.dto.AuthResponse;
+import org.example.secshare.auth.dto.MeResponse;
+import org.example.secshare.auth.security.UserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -26,5 +29,10 @@ public class AuthController {
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    @GetMapping("/me")
+    public MeResponse me(@AuthenticationPrincipal UserPrincipal user) {
+        return authService.me(user);
     }
 }

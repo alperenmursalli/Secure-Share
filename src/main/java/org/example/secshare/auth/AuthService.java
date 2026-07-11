@@ -3,6 +3,8 @@ package org.example.secshare.auth;
 import org.example.secshare.auth.dto.RegisterRequest;
 import org.example.secshare.auth.dto.LoginRequest;
 import org.example.secshare.auth.dto.AuthResponse;
+import org.example.secshare.auth.dto.MeResponse;
+import org.example.secshare.auth.security.UserPrincipal;
 import org.example.secshare.user.User;
 import org.example.secshare.user.UserRepository;
 
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -63,5 +66,22 @@ public class AuthService {
 
         return new AuthResponse(token);
     }
+
+    public MeResponse me(UserPrincipal principal) {
+
+        User user = userRepository.findById(principal.userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+
+        List<String> roles = Arrays.stream(user.getRoles().split(","))
+                .map(String::trim)
+                .filter(r -> !r.isBlank())
+                .toList();
+
+        return new MeResponse(
+                user.getId(),
+                user.getEmail(),
+                roles,
+                user.getCreatedAt()
+        );
+    }
 }
-//deneme
