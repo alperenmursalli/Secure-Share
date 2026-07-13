@@ -253,6 +253,7 @@
         .share-item .si-main { min-width: 0; flex: 1; }
         .share-item .si-title { font-weight: 550; font-size: 14px; word-break: break-all; }
         .share-item .si-meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+        .share-item .si-actions { display: flex; gap: 12px; flex: none; white-space: nowrap; }
         .chip-type {
             display: inline-block; font-size: 10px; font-weight: 650; padding: 1px 6px; border-radius: 4px;
             background: var(--surface-2); color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em;
@@ -538,7 +539,7 @@
                         <label>Recipient emails</label>
                         <textarea id="shGroupEmails" rows="5"
                                   placeholder="Paste emails, one per line or comma-separated"></textarea>
-                        <span class="muted" style="font-size:12px;">Everyone on this list can download the file once they sign in with that address.</span>
+                        <span class="muted" style="font-size:12px;">Registered recipients see the file after signing in. For everyone else, use Export links to share a personal download link that needs no account.</span>
                     </div>
                     <button class="full" id="shGroupBtn" onclick="shareWithGroup()">Share with group</button>
                     <div id="shGroupMsg" class="msg"></div>
@@ -922,6 +923,28 @@
             } finally { busy('shGroupBtn', false); }
         }
 
+        async function exportAudienceLinks(shareId) {
+            try {
+                const res = await fetch(API.files + '/shares/' + shareId + '/members', { headers: authHeaders() });
+                if (res.status === 401) { logout(); return; }
+                if (!res.ok) { toast('Could not export links.'); return; }
+                const members = await res.json();
+                if (!members.length) { toast('No recipients to export.'); return; }
+                const origin = window.location.origin;
+                const esc = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+                const rows = [['email', 'link', 'opened_at', 'downloads']];
+                members.forEach(m => rows.push([m.email, m.url ? origin + m.url : '', m.openedAt || '', m.downloadCount]));
+                const csv = rows.map(r => r.map(esc).join(',')).join('\r\n');
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'recipient-links.csv';
+                document.body.appendChild(a); a.click(); a.remove();
+                URL.revokeObjectURL(url);
+                toast('Exported ' + members.length + ' recipient link' + (members.length === 1 ? '' : 's') + '.');
+            } catch (e) { toast('Network error.'); }
+        }
+
         async function loadShares() {
             const list = document.getElementById('shareList');
             list.innerHTML = '<div class="empty" style="padding:16px;"><span class="spinner"></span></div>';
@@ -964,13 +987,15 @@
                     }
                     const burns = s.burnAfterAccess || (s.type !== 'AUDIENCE' && s.burnMode && s.burnMode !== 'NONE');
                     const burnChip = burns ? '<span class="chip-burn">Burn</span>' : '';
+                    const exportBtn = s.type === 'AUDIENCE'
+                        ? `<button class="link" onclick="exportAudienceLinks('${s.id}')">Export links</button>` : '';
                     return `
                         <div class="share-item">
                             <div class="si-main">
                                 <div class="si-title"><span class="chip-type">${typeLabel}</span>${burnChip}${title}</div>
                                 <div class="si-meta">${meta}</div>
                             </div>
-                            <button class="link" onclick="revokeShare('${s.id}')">Revoke</button>
+                            <div class="si-actions">${exportBtn}<button class="link" onclick="revokeShare('${s.id}')">Revoke</button></div>
                         </div>`;
                 }).join('');
             } catch (e) {

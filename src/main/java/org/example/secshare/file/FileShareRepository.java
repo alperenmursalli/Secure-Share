@@ -33,6 +33,9 @@ public interface FileShareRepository extends JpaRepository<FileShare, UUID> {
             "where fs.file.id = :fileId and fs.type = :type and fs.revoked = false")
     List<UUID> findActiveAudienceIds(@Param("fileId") UUID fileId, @Param("type") ShareType type);
 
+    /** The active share that exposes a given audience (audiences map 1:1 to a share). */
+    Optional<FileShare> findFirstByAudienceAndTypeAndRevokedFalse(Audience audience, ShareType type);
+
     /** Active audience shares whose audience includes the given recipient email. */
     @Query("select distinct fs from FileShare fs join fs.audience a " +
             "where fs.type = :type and fs.revoked = false and exists " +

@@ -36,7 +36,7 @@ public class PublicShareController {
             @RequestBody(required = false) DownloadShareRequest request
     ) {
         String password = request != null ? request.password() : null;
-        LinkDownload dl = fileShareService.resolveLinkForDownload(token, password);
+        LinkDownload dl = fileShareService.resolvePublicDownload(token, password);
         SharedFile file = dl.file();
 
         final Resource resource;

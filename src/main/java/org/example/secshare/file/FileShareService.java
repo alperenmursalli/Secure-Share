@@ -1,6 +1,7 @@
 package org.example.secshare.file;
 
 import org.example.secshare.auth.security.UserPrincipal;
+import org.example.secshare.file.dto.AudienceMemberResponse;
 import org.example.secshare.file.dto.CreateShareRequest;
 import org.example.secshare.file.dto.PublicShareMetaResponse;
 import org.example.secshare.file.dto.ShareResponse;
@@ -172,6 +173,7 @@ public class FileShareService {
             m.setId(UUID.randomUUID());
             m.setAudience(audience);
             m.setEmail(email);
+            m.setToken(generateToken()); // per-recipient account-less download link
             return m;
         }).toList();
         audienceMemberRepository.saveAll(members);
@@ -209,6 +211,29 @@ public class FileShareService {
         fileShareRepository.save(share);
     }
 
+    /** Recipients (with their account-less links) of an audience share the caller owns. */
+    @Transactional(readOnly = true)
+    public List<AudienceMemberResponse> listAudienceMembers(UUID shareId, UserPrincipal principal) {
+        FileShare share = fileShareRepository.findById(shareId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Share not found"));
+
+        if (!share.getCreatedBy().getId().equals(principal.userId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not own this share");
+        }
+        if (share.getType() != ShareType.AUDIENCE || share.getAudience() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not an audience share");
+        }
+
+        return audienceMemberRepository.findByAudience_IdOrderByEmailAsc(share.getAudience().getId())
+                .stream()
+                .map(m -> new AudienceMemberResponse(
+                        m.getEmail(),
+                        m.getToken() != null ? "/share.html?t=" + m.getToken() : null,
+                        m.getOpenedAt(),
+                        m.getDownloadCount()))
+                .toList();
+    }
+
     /** Files granted to the current user via active USER grants or AUDIENCE membership. */
     @Transactional(readOnly = true)
     public List<ShareResponse> listSharedWithMe(UserPrincipal principal) {
@@ -238,8 +263,14 @@ public class FileShareService {
 
     @Transactional(readOnly = true)
     public PublicShareMetaResponse getPublicMeta(String token) {
-        FileShare share = fileShareRepository.findByTokenAndRevokedFalse(token)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Link not found"));
+        FileShare share = fileShareRepository.findByTokenAndRevokedFalse(token).orElse(null);
+        if (share == null) {
+            // Fall back to a per-recipient audience token (account-less delivery).
+            AudienceMember member = audienceMemberRepository.findByToken(token)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Link not found"));
+            share = activeAudienceShare(member.getAudience())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Link not found"));
+        }
 
         SharedFile file = share.getFile();
         boolean available = share.isActive() && !file.isDeleted();
@@ -250,6 +281,40 @@ public class FileShareService {
                 share.hasPassword(),
                 available
         );
+    }
+
+    /** Resolves either a LINK token or a per-recipient audience token for public download. */
+    @Transactional
+    public LinkDownload resolvePublicDownload(String token, String password) {
+        if (fileShareRepository.findByTokenAndRevokedFalse(token).isPresent()) {
+            return resolveLinkForDownload(token, password);
+        }
+        return resolveAudienceTokenForDownload(token);
+    }
+
+    private LinkDownload resolveAudienceTokenForDownload(String token) {
+        AudienceMember member = audienceMemberRepository.findByToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Link not found"));
+        FileShare share = activeAudienceShare(member.getAudience())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Link not found"));
+
+        if (share.isExpired()) {
+            throw new ResponseStatusException(HttpStatus.GONE, "This link has expired");
+        }
+        if (share.getFile().isDeleted()) {
+            throw new ResponseStatusException(HttpStatus.GONE, "This file is no longer available");
+        }
+
+        member.setDownloadCount(member.getDownloadCount() + 1);
+        if (member.getOpenedAt() == null) {
+            member.setOpenedAt(Instant.now());
+        }
+        audienceMemberRepository.save(member);
+        return new LinkDownload(share.getFile(), false);
+    }
+
+    private java.util.Optional<FileShare> activeAudienceShare(Audience audience) {
+        return fileShareRepository.findFirstByAudienceAndTypeAndRevokedFalse(audience, ShareType.AUDIENCE);
     }
 
     /**

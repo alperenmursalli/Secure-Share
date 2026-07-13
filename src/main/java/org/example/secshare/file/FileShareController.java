@@ -1,6 +1,7 @@
 package org.example.secshare.file;
 
 import org.example.secshare.auth.security.UserPrincipal;
+import org.example.secshare.file.dto.AudienceMemberResponse;
 import org.example.secshare.file.dto.CreateShareRequest;
 import org.example.secshare.file.dto.ShareResponse;
 import org.springframework.http.ResponseEntity;
@@ -48,6 +49,14 @@ public class FileShareController {
     ) {
         fileShareService.revokeShare(shareId, user);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/shares/{shareId}/members")
+    public List<AudienceMemberResponse> audienceMembers(
+            @PathVariable("shareId") UUID shareId,
+            @AuthenticationPrincipal UserPrincipal user
+    ) {
+        return fileShareService.listAudienceMembers(shareId, user);
     }
 
     @GetMapping("/shared-with-me")
